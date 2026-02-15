@@ -47,7 +47,9 @@ interface HostFetchResult {
  * Fetch agents from a specific host
  */
 async function fetchHostAgents(host: Host): Promise<HostFetchResult> {
-  const isSelf = isLocalhostUrl(host.url)
+  // Use host.isSelf property from API response instead of URL-based detection
+  // This correctly handles Docker IPs (172.18.0.1), Tailscale IPs, etc.
+  const isSelf = host.isSelf === true || isLocalhostUrl(host.url)
   const baseUrl = isSelf ? '' : host.url
   const timeout = isSelf ? SELF_FETCH_TIMEOUT : PEER_FETCH_TIMEOUT
 
@@ -68,11 +70,12 @@ async function fetchHostAgents(host: Host): Promise<HostFetchResult> {
     const data: AgentsApiResponse = await response.json()
 
     // Inject host info directly onto agents (for remote hosts, ensure correct hostId/hostName/hostUrl)
+    // For self host, use empty hostUrl so client uses relative URLs (works with localhost)
     const agents = data.agents.map(agent => ({
       ...agent,
       hostId: host.id,
       hostName: host.name,
-      hostUrl: host.url
+      hostUrl: isSelf ? '' : host.url
     }))
 
     // Cache peer host agents for offline access (not self host)

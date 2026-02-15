@@ -12,6 +12,10 @@ import { pipeline, FeatureExtractionPipeline, env } from '@huggingface/transform
 env.allowLocalModels = false;  // Use HuggingFace Hub
 env.useBrowserCache = false;   // Use filesystem cache in Node.js
 
+// NOTE: CUDA/TensorRT/DML providers are disabled via npm scripts in package.json
+// (ORT_CUDA_PROVIDER_ENABLED=0, ORT_TENSORRT_PROVIDER_ENABLED=0, ORT_DML_PROVIDER_ENABLED=0)
+// This must be set before process startup, not here, to take effect.
+
 // Fast, local, CPU-friendly English embedding model
 const MODEL = 'Xenova/bge-small-en-v1.5';
 

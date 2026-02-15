@@ -289,19 +289,49 @@ export async function POST(
     }
 
     // Get session name - use agent name (new schema)
-    const sessionName = agent.name || agent.alias
-    if (!sessionName) {
+    const agentName = agent.name || agent.alias
+    if (!agentName) {
       return NextResponse.json(
         { success: false, error: 'Agent has no session name' },
         { status: 400 }
       )
     }
 
-    // Check if session exists and is online
-    const hasOnlineSession = agent.sessions?.some(s => s.status === 'online')
+    // Check if tmux session exists by querying tmux directly (live check, not cached registry)
+    // Handle session indices (e.g., "website_1" -> index 1) with case-insensitive matching
+    let sessionName = agentName
+    let hasOnlineSession = false
+
+    try {
+      // Check if any session for this agent exists in tmux
+      const { stdout: sessionList } = await execAsync('tmux list-sessions 2>/dev/null || echo ""')
+      const sessions = sessionList.trim().split('\n').filter(line => line.trim())
+
+      // Find any session for this agent (case-insensitive match for agentName or agentName_N pattern)
+      const lowerAgentName = agentName.toLowerCase()
+      const matchingSession = sessions.find(line => {
+        const match = line.match(/^([^:]+):/)
+        if (!match) return false
+        const tmuxSessionName = match[1]
+        const lowerTmuxName = tmuxSessionName.toLowerCase()
+
+        // Exact match or pattern match (agentName or agentName_N)
+        return lowerTmuxName === lowerAgentName || lowerTmuxName.startsWith(`${lowerAgentName}_`)
+      })
+
+      if (matchingSession) {
+        hasOnlineSession = true
+        // Extract the actual tmux session name (preserves original case from tmux)
+        sessionName = matchingSession.match(/^([^:]+):/)![1]
+      }
+    } catch (tmuxError) {
+      // tmux check failed, log but don't fail the request
+      console.log('[Chat API] tmux check failed:', tmuxError)
+    }
+
     if (!hasOnlineSession) {
       return NextResponse.json(
-        { success: false, error: 'Agent session is not online' },
+        { success: false, error: 'Agent session is not online. Wake the tmux session first.' },
         { status: 400 }
       )
     }

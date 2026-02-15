@@ -56,7 +56,15 @@ export function useMeetingMessages({
         params.set('since', lastFetchRef.current)
       }
 
-      const res = await fetch(`/api/messages/meeting?${params}`)
+      // Add timeout to prevent indefinite loading
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+
+      const res = await fetch(`/api/messages/meeting?${params}`, {
+        signal: controller.signal
+      })
+      clearTimeout(timeoutId)
+
       if (!res.ok) return
 
       const data = await res.json()
@@ -86,8 +94,11 @@ export function useMeetingMessages({
         const latest = newMessages[newMessages.length - 1]
         lastFetchRef.current = latest.timestamp
       }
-    } catch {
-      // Silently fail on poll errors
+    } catch (err) {
+      // Silently fail on poll errors (timeout, network, etc.)
+      if ((err as Error).name === 'AbortError') {
+        console.warn('[useMeetingMessages] Fetch timeout for meeting messages')
+      }
     }
   }, [meetingId, isActive, participantKey])
 

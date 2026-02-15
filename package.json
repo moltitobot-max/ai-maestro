@@ -25,11 +25,11 @@
     "macos"
   ],
   "scripts": {
-    "dev": "NEXT_PRIVATE_SKIP_LOCKFILE_CHECK=1 node server.mjs",
-    "dev:linux": "NEXT_PRIVATE_SKIP_LOCKFILE_CHECK=1 node server.mjs",
+    "dev": "NEXT_PRIVATE_SKIP_LOCKFILE_CHECK=1 ORT_CUDA_PROVIDER_ENABLED=0 ORT_TENSORRT_PROVIDER_ENABLED=0 ORT_DML_PROVIDER_ENABLED=0 node server.mjs",
+    "dev:linux": "NEXT_PRIVATE_SKIP_LOCKFILE_CHECK=1 ORT_CUDA_PROVIDER_ENABLED=0 ORT_TENSORRT_PROVIDER_ENABLED=0 ORT_DML_PROVIDER_ENABLED=0 node server.mjs",
     "prebuild": "npx tsx scripts/build-help-index.ts || test -f data/.help-build-success",
-    "build": "NEXT_PRIVATE_SKIP_LOCKFILE_CHECK=1 next build",
-    "start": "NODE_ENV=production NEXT_PRIVATE_SKIP_LOCKFILE_CHECK=1 node server.mjs",
+    "build": "NEXT_PRIVATE_SKIP_LOCKFILE_CHECK=1 ORT_CUDA_PROVIDER_ENABLED=0 ORT_TENSORRT_PROVIDER_ENABLED=0 ORT_DML_PROVIDER_ENABLED=0 next build",
+    "start": "NODE_ENV=production NEXT_PRIVATE_SKIP_LOCKFILE_CHECK=1 ORT_CUDA_PROVIDER_ENABLED=0 ORT_TENSORRT_PROVIDER_ENABLED=0 ORT_DML_PROVIDER_ENABLED=0 node server.mjs",
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest"

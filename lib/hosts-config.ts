@@ -123,28 +123,36 @@ export function getLocalIPs(): { ip: string; family: string; internal: boolean; 
 /**
  * Get the preferred IP address for external communication
  * Priority: Tailscale (100.x) > LAN (10.x, 192.168.x) > other
+ * EXCLUDES Docker IPs (172.16.0.0/12) as they're only accessible from the host
  * NEVER returns localhost or 127.0.0.1
  */
 export function getPreferredIP(): string | null {
   const ips = getLocalIPs()
 
+  // Filter out Docker bridge IPs (172.16.0.0/12) as they're not suitable for external communication
+  const nonDockerIPs = ips.filter(i => {
+    // Docker uses 172.16.0.0/12 range (172.16.0.0 - 172.31.255.255)
+    // These are bridge IPs that only work on the host machine, not from other machines
+    return !/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(i.ip)
+  })
+
   // Priority 1: Tailscale IPs (100.x.x.x range used by Tailscale)
-  const tailscaleIP = ips.find(i => i.ip.startsWith('100.'))
+  const tailscaleIP = nonDockerIPs.find(i => i.ip.startsWith('100.'))
   if (tailscaleIP) return tailscaleIP.ip
 
-  // Priority 2: Private LAN IPs
-  const lanIP = ips.find(i =>
+  // Priority 2: Private LAN IPs (excluding Docker)
+  const lanIP = nonDockerIPs.find(i =>
     i.ip.startsWith('10.') ||
-    i.ip.startsWith('192.168.') ||
-    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(i.ip)
+    i.ip.startsWith('192.168.')
   )
   if (lanIP) return lanIP.ip
 
-  // Priority 3: Any other non-internal IP
-  if (ips.length > 0) return ips[0].ip
+  // Priority 3: Any other non-Docker IP
+  if (nonDockerIPs.length > 0) return nonDockerIPs[0].ip
 
-  // Fallback: null (caller should handle this)
-  return null
+  // Fallback: Use localhost if no other IPs available
+  // This is better than returning null, as it works for single-machine setups
+  return 'localhost'
 }
 
 /**
